@@ -12,20 +12,21 @@ import telebot
 import threading
 import queue
 
+device = "cuda"
+compute_type = "float16"
+
+print("Start loading model")
+# 1. Transcribe with original whisper (batched)
+model = whisperx.load_model("large-v2", device, compute_type=compute_type)
+
+# save model to local path (optional)
+# model_dir = "/path/"
+# model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=model_dir)
+
 
 def get_transcription(audio_file):
-    device = "cuda"
-    # audio_file = "audio_2025-07-10_20-29-04.ogg"
     batch_size = 16  # reduce if low on GPU mem
     # change to "int8" if low on GPU mem (may reduce accuracy)
-    compute_type = "float16"
-
-    # 1. Transcribe with original whisper (batched)
-    model = whisperx.load_model("large-v2", device, compute_type=compute_type)
-
-    # save model to local path (optional)
-    # model_dir = "/path/"
-    # model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=model_dir)
 
     audio = whisperx.load_audio(audio_file)
     result = model.transcribe(audio, batch_size=batch_size)
@@ -71,14 +72,20 @@ def get_transcription(audio_file):
     return '\n'.join(listToReturn)
 
 
-def get_summary(model="gemma3:12b", text="Привет"):
+def get_summary(text="Привет"):
     llm_host = os.getenv("LLM_URL")
-    url = f"{llm_host}/api/generate"
+    url = f"{llm_host}/v1/chat/completions"
 
     data = {
-        "model": model,
-        "prompt": f'''Сделай краткое резюме текста звонка. Опиши основные цели, задачи этого разговора. Формат вывода - plain text.
-            {text}''',
+        "messages": [
+            {
+                "role": "system",
+                "content": "Сделай краткое резюме текста звонка. Опиши основные цели, задачи этого разговора. Формат вывода - plain text."
+            },
+            {
+                "role": "user",
+                "content": f'''{text}'''
+            }],
         "stream": False
     }
 
@@ -87,10 +94,12 @@ def get_summary(model="gemma3:12b", text="Привет"):
         response.raise_for_status()
 
         json_response = response.json()
-        if 'response' in json_response:
-            return json_response['response']
+        if 'choices' in json_response and len(json_response['choices']) and 'message' in json_response['choices'][0] and 'content' in json_response['choices'][0]['message']:
+            return json_response['choices'][0]['message']['content']
         else:
-            return f"Ошибка: в ответе отсутствует ключ 'response'. Полный ответ: {json_response}"
+            return f'''Ошибка: неверный формат ответа.
+Полный ответ:
+{json_response}'''
 
     except requests.exceptions.RequestException as e:
         return f"Ошибка сети: {str(e)}"
@@ -123,37 +132,44 @@ def worker() -> None:
 
 
 def process_audio(message, bot) -> None:
+    try:
+        os.mkdir(f'files/{str(message.id)}')
+        file_name = f'files/{message.id}/{message.audio.file_name}'
 
-    os.mkdir(f'files/{str(message.id)}')
-    file_name = f'files/{message.id}/{message.audio.file_name}'
+        downloaded_file = bot.download_file(
+            bot.get_file(message.audio.file_id).file_path)
+        with open(file_name, 'wb') as new_file:
+            new_file.write(downloaded_file)
 
-    downloaded_file = bot.download_file(
-        bot.get_file(message.audio.file_id).file_path)
-    with open(file_name, 'wb') as new_file:
-        new_file.write(downloaded_file)
+        result = get_transcription(file_name)
 
-    result = get_transcription(file_name)
+        output_file_name = f'files/{str(message.id)}/text.txt'
+        with open(output_file_name, 'w', encoding='utf-8') as f:
+            f.write(result)
 
-    output_file_name = f'files/{str(message.id)}/text.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(result)
+        with open(output_file_name, 'rt', encoding='utf-8') as f:
+            bot.send_document(message.chat.id, f,
+                              reply_to_message_id=message.id)
 
-    with open(output_file_name, 'rt', encoding='utf-8') as f:
-        bot.send_document(message.chat.id, f, reply_to_message_id=message.id)
+        print("Starting the summarization")
 
-    print("Starting the summarization")
+        bot.send_message(message.chat.id, "Запускаем саммаризацию",
+                         reply_to_message_id=message.id)
 
-    bot.send_message(message.chat.id, "Запускаем саммаризацию",
-                     reply_to_message_id=message.id)
+        summary = get_summary(text=result.replace("SPEAKER_", "Участник_"))
 
-    summary = get_summary(text=result.replace("SPEAKER_", "Участник_"))
+        print("Sending the summarization result")
 
-    print("Sending the summarization result")
+        bot.send_message(message.chat.id, md_to_text(
+            summary), reply_to_message_id=message.id)
 
-    bot.send_message(message.chat.id, md_to_text(
-        summary), reply_to_message_id=message.id)
-
-    shutil.rmtree(str(f'files/{message.id}'))
+        print("Done")
+    except:
+        print("Ошибка обработки аудио")
+        bot.send_message(message.chat.id, "Ошибка обработки аудио",
+                         reply_to_message_id=message.id)
+    finally:
+        shutil.rmtree(str(f'files/{message.id}'))
 
 
 def main():
