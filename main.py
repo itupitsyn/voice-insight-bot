@@ -80,7 +80,22 @@ def get_summary(text="Привет"):
         "messages": [
             {
                 "role": "system",
-                "content": "Сделай краткое резюме текста звонка. Опиши основные цели, задачи этого разговора. Формат вывода - plain text."
+                "content": f'''Шаблон для создания summary: 
+Тема обсуждения: <text>
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text> 
+.
+.
+.
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text>
+'''
             },
             {
                 "role": "user",
@@ -134,16 +149,25 @@ def worker() -> None:
 def process_audio(message, bot) -> None:
     try:
         os.mkdir(f'files/{str(message.id)}')
-        file_name = f'files/{message.id}/{message.audio.file_name}'
 
-        downloaded_file = bot.download_file(
-            bot.get_file(message.audio.file_id).file_path)
+        file_name = ''
+        if message.audio:
+            file_name = f'files/{message.id}/{message.audio.file_name}'
+
+            downloaded_file = bot.download_file(
+                bot.get_file(message.audio.file_id).file_path)
+        else:
+            file_name = f'files/{message.id}/{message.voice.file_id}.ogg'
+
+            downloaded_file = bot.download_file(
+                bot.get_file(message.voice.file_id).file_path)
+
         with open(file_name, 'wb') as new_file:
             new_file.write(downloaded_file)
 
         result = get_transcription(file_name)
 
-        output_file_name = f'files/{str(message.id)}/text.txt'
+        output_file_name = f'files/{str(message.id)}/transcription.txt'
         with open(output_file_name, 'w', encoding='utf-8') as f:
             f.write(result)
 
@@ -192,11 +216,16 @@ def main():
 
     threading.Thread(target=worker).start()
 
-    @bot.message_handler(content_types=['audio'])
+    @bot.message_handler(content_types=['audio', 'voice'])
     def add_to_queue(message):
         bot.send_message(message.chat.id, "Файл добавлен в очередь",
                          reply_to_message_id=message.id)
         q.put({"bot": bot, "message": message})
+
+    @bot.message_handler(commands=['start'])
+    def send_welcome(message):
+        bot.send_message(
+            message.chat.id, "Отправьте аудиофайл или голосовое сообщение для получения саммари")
 
     print("🎧 Бот запущен. Ожидание аудиофайлов...")
     bot.infinity_polling()
