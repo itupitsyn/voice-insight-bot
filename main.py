@@ -1,4 +1,4 @@
-import whisperx
+# import whisperx
 from dotenv import load_dotenv
 import os
 import shutil
@@ -12,12 +12,14 @@ import telebot
 import threading
 import queue
 
+from message_handlers import add_handlers
+
 device = "cuda"
 compute_type = "float16"
 
 print("Start loading model")
 # 1. Transcribe with original whisper (batched)
-model = whisperx.load_model("large-v2", device, compute_type=compute_type)
+# model = whisperx.load_model("large-v2", device, compute_type=compute_type)
 
 # save model to local path (optional)
 # model_dir = "/path/"
@@ -80,13 +82,13 @@ def get_summary(text="Привет"):
         "messages": [
             {
                 "role": "system",
-                "content": f'''Шаблон для создания summary: 
+                "content": f'''Шаблон для создания summary:
 Тема обсуждения: <text>
 
 - Задача: <text>
 - Описание / Концепция / Детали задачи: <text>
 - Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text> 
+- Материалы (optinal): <text>
 .
 .
 .
@@ -214,18 +216,9 @@ def main():
 
     bot = telebot.TeleBot(tg_token)
 
+    add_handlers(bot, q)
+
     threading.Thread(target=worker).start()
-
-    @bot.message_handler(content_types=['audio', 'voice'])
-    def add_to_queue(message):
-        bot.send_message(message.chat.id, "Файл добавлен в очередь",
-                         reply_to_message_id=message.id)
-        q.put({"bot": bot, "message": message})
-
-    @bot.message_handler(commands=['start'])
-    def send_welcome(message):
-        bot.send_message(
-            message.chat.id, "Отправьте аудиофайл или голосовое сообщение для получения саммари")
 
     print("🎧 Бот запущен. Ожидание аудиофайлов...")
     bot.infinity_polling()
