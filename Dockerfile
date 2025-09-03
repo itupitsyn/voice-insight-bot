@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.0.0-devel-ubuntu20.04
 
 WORKDIR /root
 
-COPY main.py .env ./
+COPY main.py .env localization.py message_handlers.py ./
 
 RUN apt update -y && DEBIAN_FRONTEND=noninteractive apt install -y ffmpeg \
 python3 python3-pip libcudnn8 libcudnn8-dev
