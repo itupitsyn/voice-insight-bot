@@ -1,3 +1,4 @@
 .env
 *.dll
 files
+__pycache__

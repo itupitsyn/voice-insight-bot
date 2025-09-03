@@ -1,7 +1,6 @@
 import whisperx
 from dotenv import load_dotenv
 import os
-import shutil
 import requests
 
 import markdown  # pip install markdown
@@ -11,6 +10,10 @@ import telebot
 
 import threading
 import queue
+
+from localization import get_localized, get_language_code
+
+from message_handlers import add_handlers, get_base_markup
 
 device = "cuda"
 compute_type = "float16"
@@ -23,6 +26,40 @@ model = whisperx.load_model("large-v2", device, compute_type=compute_type)
 # model_dir = "/path/"
 # model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=model_dir)
 
+summary_prompt = f'''Шаблон для создания summary:
+Тема обсуждения: <text>
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text>
+.
+.
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text>
+'''
+
+short_summary_prompt = f'''Шаблон для создания summary:
+Тема обсуждения: <text>
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text>
+.
+.
+
+- Задача: <text>
+- Описание / Концепция / Детали задачи: <text>
+- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
+- Материалы (optinal): <text>
+
+Только давай покороче
+'''
+
 
 def get_transcription(audio_file):
     batch_size = 16  # reduce if low on GPU mem
@@ -30,6 +67,8 @@ def get_transcription(audio_file):
 
     audio = whisperx.load_audio(audio_file)
     result = model.transcribe(audio, batch_size=batch_size)
+    language_code = result["language"]
+
     # print(result["segments"]) # before alignment
 
     # # delete model if low on GPU resources
@@ -37,7 +76,7 @@ def get_transcription(audio_file):
 
     # # 2. Align whisper output
     model_a, metadata = whisperx.load_align_model(
-        language_code=result["language"], device=device)
+        language_code=language_code, device=device)
     result = whisperx.align(
         result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
 
@@ -63,16 +102,30 @@ def get_transcription(audio_file):
 
     listToReturn = []
 
+    prev_speaker = None
+
     for i in result["segments"]:
+
+        speaker = None
         if isinstance(i, dict) and "speaker" in i:
-            listToReturn.append(f'{i["speaker"]}: {i["text"].strip()}')
+            speaker = i["speaker"]
         else:
-            listToReturn.append(f'Неизвестный участник: {i["text"].strip()}')
+            speaker = get_localized("unknown_speaker", language_code)
 
-    return '\n'.join(listToReturn)
+        if prev_speaker != speaker:
+            listToReturn.append(f'{speaker}: {i["text"].strip()}')
+            prev_speaker = speaker
+        else:
+            listToReturn.append(i["text"].strip())
+
+    result = '\n'.join(listToReturn)
+    if language_code == "ru":
+        result = result.replace("SPEAKER_", "Участник_")
+
+    return result
 
 
-def get_summary(text="Привет"):
+def get_summary(text="Привет", system_prompt="Сделай саммаризацию"):
     llm_host = os.getenv("LLM_URL")
     url = f"{llm_host}/v1/chat/completions"
 
@@ -80,22 +133,7 @@ def get_summary(text="Привет"):
         "messages": [
             {
                 "role": "system",
-                "content": f'''Шаблон для создания summary: 
-Тема обсуждения: <text>
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text> 
-.
-.
-.
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text>
-'''
+                "content": system_prompt
             },
             {
                 "role": "user",
@@ -135,29 +173,35 @@ def worker() -> None:
     print("The queue worker has been started")
     while True:
         item = q.get()
-        bot = item.get("bot")
-        message = item.get("message")
+        bot: telebot.TeleBot = item.get("bot")
+        message: telebot.types.Message = item.get("message")
+        bot_message_id = item.get("bot_message_id")
 
-        bot.send_message(message.chat.id, "Начинаем обработку файла",
-                         reply_to_message_id=message.id)
+        code = get_language_code(message)
 
-        process_audio(message, bot)
+        bot.edit_message_text(chat_id=message.chat.id,
+                              text=get_localized("start_processing", code),
+                              message_id=bot_message_id)
+
+        process_audio(message, bot, bot_message_id)
 
         q.task_done()
 
 
-def process_audio(message, bot) -> None:
+def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int) -> None:
+    code = get_language_code(message)
     try:
-        os.mkdir(f'files/{str(message.id)}')
+        dir_name = f'files/{str(message.chat.id)}_{str(bot_message_id)}'
+        os.mkdir(dir_name)
 
         file_name = ''
         if message.audio:
-            file_name = f'files/{message.id}/{message.audio.file_name}'
+            file_name = f'{dir_name}/{message.audio.file_name}'
 
             downloaded_file = bot.download_file(
                 bot.get_file(message.audio.file_id).file_path)
         else:
-            file_name = f'files/{message.id}/{message.voice.file_id}.ogg'
+            file_name = f'{dir_name}/{message.voice.file_id}.ogg'
 
             downloaded_file = bot.download_file(
                 bot.get_file(message.voice.file_id).file_path)
@@ -165,35 +209,42 @@ def process_audio(message, bot) -> None:
         with open(file_name, 'wb') as new_file:
             new_file.write(downloaded_file)
 
-        result = get_transcription(file_name)
+        transcription = get_transcription(file_name)
 
-        output_file_name = f'files/{str(message.id)}/transcription.txt'
+        output_file_name = f'{dir_name}/transcription.txt'
         with open(output_file_name, 'w', encoding='utf-8') as f:
-            f.write(result)
+            f.write(transcription)
 
-        with open(output_file_name, 'rt', encoding='utf-8') as f:
-            bot.send_document(message.chat.id, f,
-                              reply_to_message_id=message.id)
+        bot.edit_message_text(chat_id=message.chat.id,
+                              message_id=bot_message_id,
+                              text=get_localized(
+                                  'start_summarization', code))
 
-        print("Starting the summarization")
+        result = get_summary(text=transcription, system_prompt=summary_prompt)
+        output_file_name = f'{dir_name}/summary.txt'
+        with open(output_file_name, 'w', encoding='utf-8') as f:
+            f.write(md_to_text(result))
 
-        bot.send_message(message.chat.id, "Запускаем саммаризацию",
-                         reply_to_message_id=message.id)
+        result = get_summary(text=transcription,
+                             system_prompt=short_summary_prompt)
+        output_file_name = f'{dir_name}/short_summary.txt'
+        with open(output_file_name, 'w', encoding='utf-8') as f:
+            f.write(md_to_text(result))
 
-        summary = get_summary(text=result.replace("SPEAKER_", "Участник_"))
-
-        print("Sending the summarization result")
-
-        bot.send_message(message.chat.id, md_to_text(
-            summary), reply_to_message_id=message.id)
+        bot.edit_message_text(chat_id=message.chat.id,
+                              message_id=bot_message_id,
+                              text=get_localized(
+                                  'processing_completed', code),
+                              reply_markup=get_base_markup(code))
 
         print("Done")
     except:
         print("Ошибка обработки аудио")
-        bot.send_message(message.chat.id, "Ошибка обработки аудио",
+        bot.send_message(message.chat.id,
+                         get_localized("processing_error", code),
                          reply_to_message_id=message.id)
     finally:
-        shutil.rmtree(str(f'files/{message.id}'))
+        os.remove(str(file_name))
 
 
 def main():
@@ -214,18 +265,9 @@ def main():
 
     bot = telebot.TeleBot(tg_token)
 
+    add_handlers(bot, q)
+
     threading.Thread(target=worker).start()
-
-    @bot.message_handler(content_types=['audio', 'voice'])
-    def add_to_queue(message):
-        bot.send_message(message.chat.id, "Файл добавлен в очередь",
-                         reply_to_message_id=message.id)
-        q.put({"bot": bot, "message": message})
-
-    @bot.message_handler(commands=['start'])
-    def send_welcome(message):
-        bot.send_message(
-            message.chat.id, "Отправьте аудиофайл или голосовое сообщение для получения саммари")
 
     print("🎧 Бот запущен. Ожидание аудиофайлов...")
     bot.infinity_polling()
