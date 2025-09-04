@@ -201,7 +201,7 @@ def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_mess
             downloaded_file = bot.download_file(
                 bot.get_file(message.audio.file_id).file_path)
         else:
-            file_name = f'{dir_name}/{message.voice.file_id}.ogg'
+            file_name = f'{dir_name}/voice.ogg'
 
             downloaded_file = bot.download_file(
                 bot.get_file(message.voice.file_id).file_path)
@@ -240,11 +240,14 @@ def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_mess
         print("Done")
     except:
         print("Ошибка обработки аудио")
-        bot.send_message(message.chat.id,
-                         get_localized("processing_error", code),
-                         reply_to_message_id=message.id)
+        bot.edit_message_text(chat_id=message.chat.id,
+                              message_id=bot_message_id,
+                              text=get_localized("processing_error", code))
     finally:
-        os.remove(str(file_name))
+        try:
+            os.remove(file_name)
+        except:
+            print(f"Error removing file \"{file_name}\"")
 
 
 def main():
