@@ -1,0 +1,31 @@
+name: Deploy to prod
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: deploy
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: 50
+          script: |
+            cd voice-insight-bot \
+            && git fetch && git reset origin/master --hard \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker stop voice-insight-bot || true \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker rm voice-insight-bot || true \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker rmi voice-insight-bot || true \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker build . -t voice-insight-bot \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker run -d \
+            --restart always \
+            -e HF_API_KEY=${{ secrets.HF_API_KEY }} \
+            -e TG_API_KEY=${{ secrets.TG_API_KEY }} \
+            -e LLM_URL=${{ secrets.LLM_URL }} \
+            -v /home/user/voice-insight-bot/files:/root/files \
+            --gpus all --name voice-insight-bot voice-insight-bot
