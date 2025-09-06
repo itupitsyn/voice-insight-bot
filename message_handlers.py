@@ -78,7 +78,8 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                                       message_id=call.message.message_id,
                                       text=content,
                                       reply_markup=markup)
-        except:
+        except Exception as e:
+            print(e)
             bot.answer_callback_query(call.id, f"{text_type} not found")
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("download_"))

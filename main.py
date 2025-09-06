@@ -190,24 +190,27 @@ def worker() -> None:
 
 def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int) -> None:
     code = get_language_code(message)
+    file_name = ''
+
     try:
         dir_name = f'files/{str(message.chat.id)}_{str(bot_message_id)}'
         os.mkdir(dir_name)
 
-        file_name = ''
+        file_server_path = ""
         if message.audio:
             file_name = f'{dir_name}/{message.audio.file_name}'
+            file_server_path = bot.get_file(message.audio.file_id)
 
-            downloaded_file = bot.download_file(
-                bot.get_file(message.audio.file_id).file_path)
         else:
             file_name = f'{dir_name}/voice.ogg'
+            file_server_path = bot.get_file(message.voice.file_id).file_path
 
-            downloaded_file = bot.download_file(
-                bot.get_file(message.voice.file_id).file_path)
+        file_full_server_path = f"{os.getenv('TG_FILES_API_ADDRESS')}/file/bot{os.getenv('TG_API_KEY')}{file_server_path}"
 
-        with open(file_name, 'wb') as new_file:
-            new_file.write(downloaded_file)
+        response = requests.get(file_full_server_path)
+
+        with open(file_name, 'wb') as file:
+            file.write(response.content)
 
         transcription = get_transcription(file_name)
 
@@ -238,8 +241,9 @@ def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_mess
                               reply_markup=get_base_markup(code))
 
         print("Done")
-    except:
+    except Exception as e:
         print("Ошибка обработки аудио")
+        print(e)
         bot.edit_message_text(chat_id=message.chat.id,
                               message_id=bot_message_id,
                               text=get_localized("processing_error", code))
@@ -267,6 +271,15 @@ def main():
         print("⚠️ HF_API_KEY не найден - диаризация может не работать")
 
     bot = telebot.TeleBot(tg_token)
+
+    api_addr = os.getenv("TG_API_ADDRESS")
+    if not api_addr:
+        raise ValueError("Локальный адрес для бота не установлен!")
+
+    if not os.getenv("TG_FILES_API_ADDRESS"):
+        raise ValueError("Локальный адрес для файлов бота не установлен!")
+
+    telebot.apihelper.API_URL = api_addr + "/bot{0}/{1}"
 
     add_handlers(bot, q)
 
