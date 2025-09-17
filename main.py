@@ -101,7 +101,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
                 file_name
             ]
 
-            run(cmd, check=True)
+            run(cmd)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
