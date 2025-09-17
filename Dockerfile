@@ -2,7 +2,7 @@ FROM emptynull/whisperx-cuda:latest
 
 WORKDIR /root
 
-COPY main.py .env localization.py message_handlers.py ./
+COPY .env main.py localization.py message_handlers.py utils.py prompts.py ./
 
 CMD ["python3", "main.py"]
 

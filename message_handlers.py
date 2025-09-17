@@ -2,6 +2,7 @@ import telebot
 from telebot.util import quick_markup
 from localization import get_localized, get_language_code
 import queue
+from utils import get_dir_name
 
 MESSAGE_LIMIT = 4096
 
@@ -24,7 +25,7 @@ def get_text_processing_markup(language_code: str, text_type: str):
 
 
 def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
-    @bot.message_handler(content_types=['audio', 'voice'])
+    @bot.message_handler(content_types=['audio', 'voice', 'video', 'document'])
     def add_to_queue(message):
         code = get_language_code(message)
         msg = bot.send_message(message.chat.id,
@@ -32,7 +33,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                                reply_to_message_id=message.id)
         q.put({"bot": bot, "message": message, "bot_message_id": msg.id})
 
-    @bot.message_handler(commands=['start'])
+    @bot.message_handler(commands=['start', 'help'])
     def send_welcome(message):
         code = get_language_code(message)
         bot.send_message(
@@ -61,7 +62,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
     @bot.callback_query_handler(func=lambda call: call.data.startswith("show_"))
     def handle_button_click(call):
 
-        dir_name = f'files/{str(call.message.chat.id)}_{str(call.message.id)}'
+        dir_name = get_dir_name(call.message.chat.id, call.message.id)
         text_type = call.data.replace("show_", "", 1)
         file_name = text_type + ".txt"
 
@@ -85,7 +86,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
     @bot.callback_query_handler(func=lambda call: call.data.startswith("download_"))
     def handle_button_click(call):
 
-        dir_name = f'files/{str(call.message.chat.id)}_{str(call.message.id)}'
+        dir_name = get_dir_name(call.message.chat.id, call.message.id)
         text_type = call.data.replace("download_", "", 1)
         file_name = text_type + ".txt"
 

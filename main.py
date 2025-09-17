@@ -1,10 +1,6 @@
-import whisperx
 from dotenv import load_dotenv
 import os
 import requests
-
-import markdown  # pip install markdown
-from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 import telebot
 
@@ -14,157 +10,9 @@ import queue
 from localization import get_localized, get_language_code
 
 from message_handlers import add_handlers, get_base_markup
-
-device = "cuda"
-compute_type = "float16"
-
-print("Start loading model")
-# 1. Transcribe with original whisper (batched)
-model = whisperx.load_model("large-v2", device, compute_type=compute_type)
-
-# save model to local path (optional)
-# model_dir = "/path/"
-# model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=model_dir)
-
-summary_prompt = f'''Шаблон для создания summary:
-Тема обсуждения: <text>
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text>
-.
-.
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text>
-'''
-
-short_summary_prompt = f'''Шаблон для создания summary:
-Тема обсуждения: <text>
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data> + <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text>
-.
-.
-
-- Задача: <text>
-- Описание / Концепция / Детали задачи: <text>
-- Сроки: <data>+ <text> для доп. комментариев / уточнений по срокам
-- Материалы (optinal): <text>
-
-Только давай покороче
-'''
-
-
-def get_transcription(audio_file):
-    batch_size = 16  # reduce if low on GPU mem
-    # change to "int8" if low on GPU mem (may reduce accuracy)
-
-    audio = whisperx.load_audio(audio_file)
-    result = model.transcribe(audio, batch_size=batch_size)
-    language_code = result["language"]
-
-    # print(result["segments"]) # before alignment
-
-    # # delete model if low on GPU resources
-    # # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model
-
-    # # 2. Align whisper output
-    model_a, metadata = whisperx.load_align_model(
-        language_code=language_code, device=device)
-    result = whisperx.align(
-        result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
-
-    # print(result["segments"]) # after alignment
-
-    # delete model if low on GPU resources
-    # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model_a
-
-    # 3. Assign speaker labels
-    diarize_model = whisperx.diarize.DiarizationPipeline(
-        use_auth_token=os.getenv("HF_API_KEY"), device=device)
-
-    # add min/max number of speakers if known
-    diarize_segments = diarize_model(audio)
-    # diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
-
-    result = whisperx.assign_word_speakers(diarize_segments, result)
-    # print(diarize_segments)
-    # print(result["segments"]) # segments are now assigned speaker IDs
-
-    # with open("wiwiw.json", "w", encoding='utf-8') as file:
-    #   json.dump(result["segments"], file, ensure_ascii=False, indent=4)
-
-    listToReturn = []
-
-    prev_speaker = None
-
-    for i in result["segments"]:
-
-        speaker = None
-        if isinstance(i, dict) and "speaker" in i:
-            speaker = i["speaker"]
-        else:
-            speaker = get_localized("unknown_speaker", language_code)
-
-        if prev_speaker != speaker:
-            listToReturn.append(f'{speaker}: {i["text"].strip()}')
-            prev_speaker = speaker
-        else:
-            listToReturn.append(i["text"].strip())
-
-    result = '\n'.join(listToReturn)
-    if language_code == "ru":
-        result = result.replace("SPEAKER_", "Участник_")
-
-    return result
-
-
-def get_summary(text="Привет", system_prompt="Сделай саммаризацию"):
-    llm_host = os.getenv("LLM_URL")
-    url = f"{llm_host}/v1/chat/completions"
-
-    data = {
-        "messages": [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": f'''{text}'''
-            }],
-        "stream": False
-    }
-
-    try:
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-
-        json_response = response.json()
-        if 'choices' in json_response and len(json_response['choices']) and 'message' in json_response['choices'][0] and 'content' in json_response['choices'][0]['message']:
-            return json_response['choices'][0]['message']['content']
-        else:
-            return f'''Ошибка: неверный формат ответа.
-Полный ответ:
-{json_response}'''
-
-    except requests.exceptions.RequestException as e:
-        return f"Ошибка сети: {str(e)}"
-    except ValueError:
-        return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
-
-
-def md_to_text(md):
-    html = markdown.markdown(md)
-    soup = BeautifulSoup(html, features='html.parser')
-    return soup.get_text()
-
+from utils import get_dir_name, get_summary, get_transcription, md_to_text
+from prompts import short_summary_prompt, summary_prompt
+from subprocess import run
 
 q = queue.Queue()
 
@@ -183,75 +31,116 @@ def worker() -> None:
                               text=get_localized("start_processing", code),
                               message_id=bot_message_id)
 
-        process_audio(message, bot, bot_message_id)
+        process_message(message, bot, bot_message_id)
 
         q.task_done()
 
 
-def process_audio(message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int) -> None:
+def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int) -> None:
     code = get_language_code(message)
     file_name = ''
-
     try:
-        dir_name = f'files/{str(message.chat.id)}_{str(bot_message_id)}'
+        file_api = os.getenv('TG_FILES_API_ADDRESS')
+        tg_api = os.getenv('TG_API_KEY')
+        file_url = f'{file_api}/file/bot{tg_api}'
+
+        dir_name = get_dir_name(message.chat.id, bot_message_id)
         os.mkdir(dir_name)
 
         file_server_path = ""
-        if message.audio:
-            file_name = f'{dir_name}/{message.audio.file_name}'
-            file_server_path = bot.get_file(message.audio.file_id)
+        if message.audio or message.voice:
+            if message.audio:
+                file_name = f'{dir_name}/{message.audio.file_name}'
+                file_server_path = bot.get_file(message.audio.file_id)
+
+            elif message.voice:
+                file_name = f'{dir_name}/voice.ogg'
+                file_server_path = bot.get_file(
+                    message.voice.file_id).file_path
+
+            file_full_server_path = f"{file_url}{file_server_path}"
+
+            response = requests.get(file_full_server_path)
+
+            with open(file_name, 'wb') as file:
+                file.write(response.content)
 
         else:
-            file_name = f'{dir_name}/voice.ogg'
-            file_server_path = bot.get_file(message.voice.file_id).file_path
+            video_file_name = ""
+            video_file_server_path = ""
 
-        file_full_server_path = f"{os.getenv('TG_FILES_API_ADDRESS')}/file/bot{os.getenv('TG_API_KEY')}{file_server_path}"
+            if message.video:
+                video_file_name = f'{dir_name}/{message.video.file_name}'
+                video_file_server_path = bot.get_file(
+                    message.video.file_id).file_path
 
-        response = requests.get(file_full_server_path)
+            elif message.document:
+                video_file_name = f'{dir_name}/{message.document.file_name}'
+                video_file_server_path = bot.get_file(
+                    message.document.file_id).file_path
 
-        with open(file_name, 'wb') as file:
-            file.write(response.content)
+            else:
+                bot.edit_message_text(chat_id=message.chat.id,
+                                      message_id=bot_message_id,
+                                      text=get_localized("unknown_content_type", code))
+                return
+            response = requests.get(f'{file_url}{video_file_server_path}')
 
-        transcription = get_transcription(file_name)
+            with open(video_file_name, 'wb') as file:
+                file.write(response.content)
 
-        output_file_name = f'{dir_name}/transcription.txt'
-        with open(output_file_name, 'w', encoding='utf-8') as f:
-            f.write(transcription)
+            file_name = f"{dir_name}/audio.aac"
+            run(f'ffmpeg -i {video_file_name} -vn -acodec copy {file_name}')
+            os.remove(video_file_name)
 
-        bot.edit_message_text(chat_id=message.chat.id,
-                              message_id=bot_message_id,
-                              text=get_localized(
-                                  'start_summarization', code))
-
-        result = get_summary(text=transcription, system_prompt=summary_prompt)
-        output_file_name = f'{dir_name}/summary.txt'
-        with open(output_file_name, 'w', encoding='utf-8') as f:
-            f.write(md_to_text(result))
-
-        result = get_summary(text=transcription,
-                             system_prompt=short_summary_prompt)
-        output_file_name = f'{dir_name}/short_summary.txt'
-        with open(output_file_name, 'w', encoding='utf-8') as f:
-            f.write(md_to_text(result))
-
-        bot.edit_message_text(chat_id=message.chat.id,
-                              message_id=bot_message_id,
-                              text=get_localized(
-                                  'processing_completed', code),
-                              reply_markup=get_base_markup(code))
+        process_audio(file_name, message, bot, bot_message_id)
 
         print("Done")
+
     except Exception as e:
         print("Ошибка обработки аудио")
         print(e)
         bot.edit_message_text(chat_id=message.chat.id,
                               message_id=bot_message_id,
                               text=get_localized("processing_error", code))
+
     finally:
         try:
             os.remove(file_name)
         except:
             print(f"Error removing file \"{file_name}\"")
+
+
+def process_audio(audio_file_name: str, message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int):
+    dir_name = get_dir_name(message.chat.id, bot_message_id)
+    code = get_language_code(message)
+    transcription = get_transcription(audio_file_name)
+
+    output_file_name = f'{dir_name}/transcription.txt'
+    with open(output_file_name, 'w', encoding='utf-8') as f:
+        f.write(transcription)
+
+    bot.edit_message_text(chat_id=message.chat.id,
+                          message_id=bot_message_id,
+                          text=get_localized(
+                              'start_summarization', code))
+
+    result = get_summary(text=transcription, system_prompt=summary_prompt)
+    output_file_name = f'{dir_name}/summary.txt'
+    with open(output_file_name, 'w', encoding='utf-8') as f:
+        f.write(md_to_text(result))
+
+    result = get_summary(text=transcription,
+                         system_prompt=short_summary_prompt)
+    output_file_name = f'{dir_name}/short_summary.txt'
+    with open(output_file_name, 'w', encoding='utf-8') as f:
+        f.write(md_to_text(result))
+
+    bot.edit_message_text(chat_id=message.chat.id,
+                          message_id=bot_message_id,
+                          text=get_localized(
+                              'processing_completed', code),
+                          reply_markup=get_base_markup(code))
 
 
 def main():

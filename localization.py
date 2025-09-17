@@ -16,8 +16,22 @@ localization = {
         "ru": "Файл добавлен в очередь"
     },
     "start_answer": {
-        "default": "Send an audio or a voice message to get the summary",
-        "ru": "Отправьте аудиофайл или голосовое сообщение для получения саммари"
+        "default": '''Hi friend 👋 We know how much time you spend in meetings and calls, how many details you need to keep track of, and how easy it is to get lost in the flow of information! That's why we created a bot for you that can transcribe audio recordings of calls and video meetings 📞.
+
+Click the paperclip 📎 and upload a call file, video meeting recording, or record your voice → our smart bot 🤖 will analyze the call → you'll get:
+✔️ a brief summary outlining the main concept of the meeting
+✔️ a full summary with detailed conversation topics
+✔️ a call transcript to dive into the details of the call
+
+You can copy and forward each item as a message or download it as a file!''',
+        "ru": '''Привет, друг 👋 Мы знаем как много времени приходится проводить на встречах и созвонах, сколько деталей нужно учесть и не потеряться в потоке информации! Для тебя мы создали бота, который умеет транскрибировать аудиозаписи звонков и видеовстреч 📞. 
+
+Нажми на скрепку 📎 и загрузи файл звонка, видеовстречи или запиши voice → наш умный бот 🤖 проанализирует звонок → ты получишь:
+✔️ краткое саммари, где изложена основная концепция встречи
+✔️ полное саммари, где можно увидеть детализированные топики разговора
+✔️ транскрипцию звонка, чтобы погрузиться в детали звонка
+
+Каждый пункт можно скопировать и переслать в виде сообщения или загрузить файлом!'''
     },
     "processing_completed": {
         "default": "Processing completed",
@@ -54,6 +68,10 @@ localization = {
     "unknown_speaker": {
         "default": "Unknown speaker",
         "ru": "Неизвестный участник"
+    },
+    "unknown_content_type": {
+        "default": "Unknown content type",
+        "ru": "Неизвестный тип контента"
     }
 }
 
