@@ -95,7 +95,8 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
                 "-i",
                 video_file_name,
                 "-vn",
-                "-acodec",
+                "-c:a",
+                "aac",
                 "copy",
                 file_name
             ]
