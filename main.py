@@ -101,7 +101,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
                 file_name
             ]
 
-            run(cmd, shell=True)
+            run(f"ffmpeg -i {video_file_name} -vn -c:a aac copy {file_name}", shell=True, check=True)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
