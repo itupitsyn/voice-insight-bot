@@ -89,9 +89,9 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
             with open(video_file_name, 'wb') as file:
                 file.write(response.content)
 
-            file_name = f"{dir_name}/audio.wav"
+            file_name = f"{dir_name}/audio.aac"
 
-            run(f"ffmpeg -i {video_file_name} -acodec pcm_s16le -ac 1 -ar 16000 {file_name}", shell=True, check=True)
+            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}", shell=True, check=True)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
