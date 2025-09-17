@@ -89,17 +89,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
             with open(video_file_name, 'wb') as file:
                 file.write(response.content)
 
-            file_name = f"{dir_name}/audio.aac"
-            cmd = [
-                "ffmpeg",
-                "-i",
-                video_file_name,
-                "-vn",
-                "-c:a",
-                "aac",
-                "copy",
-                file_name
-            ]
+            file_name = f"{dir_name}/audio.mp3"
 
             run(f"ffmpeg -i {video_file_name} q:a 0 -map a {file_name}", shell=True, check=True)
             os.remove(video_file_name)
