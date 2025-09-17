@@ -91,7 +91,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 
             file_name = f"{dir_name}/audio.mp3"
 
-            run(f"ffmpeg -i {video_file_name} q:a 0 -map a {file_name}", shell=True, check=True)
+            run(f"ffmpeg -i {video_file_name} q:a 0 -f mp3 -map a {file_name}", shell=True, check=True)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
