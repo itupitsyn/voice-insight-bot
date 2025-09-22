@@ -1,11 +1,12 @@
 import whisperx
-from dotenv import load_dotenv
+import markdown  # pip install markdown
 import os
 import requests
-
+import telebot
 from localization import get_localized
-
-import markdown  # pip install markdown
+from prompts import short_summary_prompt, summary_prompt, protocol_prompt
+from os.path import isfile
+from localization import get_localized, get_language_code
 from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 
@@ -130,3 +131,33 @@ def get_summary(text="Привет", system_prompt="Сделай саммари�
         return f"Ошибка сети: {str(e)}"
     except ValueError:
         return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
+
+
+def generate_content_if_not_exist(text_type: str, message: telebot.types.Message, bot: telebot.TeleBot) -> None:
+    dir_name = get_dir_name(message.chat.id, message.id)
+    file_name = text_type + ".txt"
+    file_full_name = f"{dir_name}/{file_name}"
+    code = get_language_code(message)
+
+    if text_type == 'transcription' or isfile(file_full_name):
+        return
+
+    transcription = ''
+    with open(f"{dir_name}/transcription.txt", "rt", encoding='utf-8') as file:
+        transcription = file.read()
+
+    bot.edit_message_text(chat_id=message.chat.id,
+                          message_id=message.message_id,
+                          text=get_localized(
+                              'start_summarization', code))
+
+    prompt = protocol_prompt
+    if text_type == 'summary':
+        prompt = summary_prompt
+    elif text_type == 'short_summary':
+        text_type = short_summary_prompt
+
+    result = get_summary(text=transcription,
+                         system_prompt=prompt)
+    with open(file_full_name, 'w', encoding='utf-8') as f:
+        f.write(md_to_text(result))

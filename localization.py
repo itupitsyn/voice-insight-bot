@@ -11,6 +11,10 @@ localization = {
         "default": "Short summary",
         "ru": "Укороченное саммари"
     },
+    "protocol": {
+        "default": "Protocol",
+        "ru": "Протокол"
+    },
     "file_added_to_queue": {
         "default": "File added to queue",
         "ru": "Файл добавлен в очередь"
