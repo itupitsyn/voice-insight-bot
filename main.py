@@ -11,7 +11,7 @@ from localization import get_localized, get_language_code
 
 from message_handlers import add_handlers, get_base_markup
 from utils import get_dir_name, get_summary, get_transcription, md_to_text
-from prompts import short_summary_prompt, summary_prompt
+from prompts import short_summary_prompt, summary_prompt, protocol_prompt
 from subprocess import run
 
 q = queue.Queue()
@@ -51,7 +51,8 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
         if message.audio or message.voice:
             if message.audio:
                 file_name = f'{dir_name}/{message.audio.file_name}'
-                file_server_path = bot.get_file(message.audio.file_id)
+                file_server_path = bot.get_file(
+                    message.audio.file_id).file_path
 
             elif message.voice:
                 file_name = f'{dir_name}/voice.ogg'
@@ -91,7 +92,8 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 
             file_name = f"{dir_name}/audio.aac"
 
-            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}", shell=True, check=True)
+            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}",
+                shell=True, check=True)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
@@ -134,6 +136,12 @@ def process_audio(audio_file_name: str, message: telebot.types.Message, bot: tel
     result = get_summary(text=transcription,
                          system_prompt=short_summary_prompt)
     output_file_name = f'{dir_name}/short_summary.txt'
+    with open(output_file_name, 'w', encoding='utf-8') as f:
+        f.write(md_to_text(result))
+
+    result = get_summary(text=transcription,
+                         system_prompt=protocol_prompt)
+    output_file_name = f'{dir_name}/protocol.txt'
     with open(output_file_name, 'w', encoding='utf-8') as f:
         f.write(md_to_text(result))
 
