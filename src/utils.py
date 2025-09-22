@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import requests
 
-from localization import get_localized
+from src.localization import get_localized
 
 import markdown  # pip install markdown
 from bs4 import BeautifulSoup  # pip install beautifulsoup4

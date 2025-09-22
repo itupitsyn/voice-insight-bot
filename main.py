@@ -7,12 +7,12 @@ import telebot
 import threading
 import queue
 
-from localization import get_localized, get_language_code
-
-from message_handlers import add_handlers, get_base_markup
-from utils import get_dir_name, get_summary, get_transcription, md_to_text
-from prompts import short_summary_prompt, summary_prompt
 from subprocess import run
+
+from src.localization import get_localized, get_language_code
+from src.message_handlers import add_handlers, get_base_markup
+from src.utils import get_dir_name, get_summary, get_transcription, md_to_text
+from src.prompts import short_summary_prompt, summary_prompt
 
 q = queue.Queue()
 
@@ -91,7 +91,8 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 
             file_name = f"{dir_name}/audio.aac"
 
-            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}", shell=True, check=True)
+            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}",
+                shell=True, check=True)
             os.remove(video_file_name)
 
         process_audio(file_name, message, bot, bot_message_id)
@@ -117,31 +118,31 @@ def process_audio(audio_file_name: str, message: telebot.types.Message, bot: tel
     code = get_language_code(message)
     transcription = get_transcription(audio_file_name)
 
-    output_file_name = f'{dir_name}/transcription.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(transcription)
+    # output_file_name = f'{dir_name}/transcription.txt'
+    # with open(output_file_name, 'w', encoding='utf-8') as f:
+    #     f.write(transcription)
 
-    bot.edit_message_text(chat_id=message.chat.id,
-                          message_id=bot_message_id,
-                          text=get_localized(
-                              'start_summarization', code))
+    # bot.edit_message_text(chat_id=message.chat.id,
+    #                       message_id=bot_message_id,
+    #                       text=get_localized(
+    #                           'start_summarization', code))
 
-    result = get_summary(text=transcription, system_prompt=summary_prompt)
-    output_file_name = f'{dir_name}/summary.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
+    # result = get_summary(text=transcription, system_prompt=summary_prompt)
+    # output_file_name = f'{dir_name}/summary.txt'
+    # with open(output_file_name, 'w', encoding='utf-8') as f:
+    #     f.write(md_to_text(result))
 
-    result = get_summary(text=transcription,
-                         system_prompt=short_summary_prompt)
-    output_file_name = f'{dir_name}/short_summary.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
+    # result = get_summary(text=transcription,
+    #                      system_prompt=short_summary_prompt)
+    # output_file_name = f'{dir_name}/short_summary.txt'
+    # with open(output_file_name, 'w', encoding='utf-8') as f:
+    #     f.write(md_to_text(result))
 
-    bot.edit_message_text(chat_id=message.chat.id,
-                          message_id=bot_message_id,
-                          text=get_localized(
-                              'processing_completed', code),
-                          reply_markup=get_base_markup(code))
+    # bot.edit_message_text(chat_id=message.chat.id,
+    #                       message_id=bot_message_id,
+    #                       text=get_localized(
+    #                           'processing_completed', code),
+    #                       reply_markup=get_base_markup(code))
 
 
 def main():

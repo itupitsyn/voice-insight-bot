@@ -1,8 +1,9 @@
 import telebot
 from telebot.util import quick_markup
-from localization import get_localized, get_language_code
 import queue
-from utils import get_dir_name
+from src.localization import get_localized, get_language_code
+from src.utils import get_dir_name
+from src.db.db import register_user
 
 MESSAGE_LIMIT = 4096
 
@@ -27,6 +28,7 @@ def get_text_processing_markup(language_code: str, text_type: str):
 def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
     @bot.message_handler(content_types=['audio', 'voice', 'video', 'document'])
     def add_to_queue(message):
+        register_user(message)
         code = get_language_code(message)
         msg = bot.send_message(message.chat.id,
                                get_localized('file_added_to_queue', code),
@@ -35,6 +37,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
 
     @bot.message_handler(commands=['start', 'help'])
     def send_welcome(message):
+        register_user(message)
         code = get_language_code(message)
         bot.send_message(
             message.chat.id,
