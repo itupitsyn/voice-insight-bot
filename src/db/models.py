@@ -37,9 +37,36 @@ class Prompt(Base):
     __tablename__ = "prompts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(
-        "users.id", ondelete='CASCADE'), nullable=True)
     name: Mapped[str] = mapped_column(String(128))
+    text: Mapped[str] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=FetchedValue(),
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        onupdate=func.now(),
+        server_default=FetchedValue(),
+        server_onupdate=FetchedValue(),
+    )
+    deleted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+
+class Transcription(Base):
+    __tablename__ = "transcriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE'))
+    chat_id: Mapped[int] = mapped_column(BigInteger)
+    message_id: Mapped[int] = mapped_column(BigInteger)
     text: Mapped[str] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -57,15 +84,14 @@ class Prompt(Base):
     )
 
 
-class Transcription(Base):
-    __tablename__ = "transcriptions"
+class Summary(Base):
+    __tablename__ = 'summaries'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete='CASCADE'))
-    chat_id: Mapped[int] = mapped_column(BigInteger)
-    message_id: Mapped[int] = mapped_column(BigInteger)
-    prompt_id: Mapped[int] = mapped_column(ForeignKey("prompts.id"))
+    prompt_id: Mapped[int] = mapped_column(
+        ForeignKey("prompts.id", ondelete='CASCADE'))
+    transcription_id: Mapped[int] = mapped_column(
+        ForeignKey("transcriptions.id", ondelete='CASCADE'))
     text: Mapped[str] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(

@@ -2,8 +2,9 @@ import whisperx
 from dotenv import load_dotenv
 import os
 import requests
+import telebot
 
-from src.localization import get_localized
+from src.localization import get_localized, get_language_code
 
 import markdown  # pip install markdown
 from bs4 import BeautifulSoup  # pip install beautifulsoup4
@@ -11,6 +12,10 @@ from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 def get_dir_name(chat_id: int, msg_id: int):
     return f'files/{str(chat_id)}_{str(msg_id)}'
+
+
+def get_file_name(chat_id: int, msg_id: int, text_type: str) -> str:
+    return f'files/{str(chat_id)}_{str(msg_id)}_{text_type}.txt'
 
 
 def md_to_text(md):
@@ -33,7 +38,7 @@ print("Start loading model")
 model = whisperx.load_model("large-v2", device, compute_type=compute_type)
 
 
-def get_transcription(audio_file):
+def generate_transcription(audio_file):
     batch_size = 16  # reduce if low on GPU mem
     # change to "int8" if low on GPU mem (may reduce accuracy)
 
@@ -97,7 +102,7 @@ def get_transcription(audio_file):
     return result
 
 
-def get_summary(text="Привет", system_prompt="Сделай саммаризацию"):
+def generate_summary(text="Привет", system_prompt="Сделай саммаризацию"):
     llm_host = os.getenv("LLM_URL")
     url = f"{llm_host}/v1/chat/completions"
 
@@ -130,3 +135,4 @@ def get_summary(text="Привет", system_prompt="Сделай саммари�
         return f"Ошибка сети: {str(e)}"
     except ValueError:
         return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
+
