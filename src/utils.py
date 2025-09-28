@@ -2,16 +2,19 @@ import whisperx
 import markdown  # pip install markdown
 import os
 import requests
-import telebot
-from localization import get_localized
-from prompts import short_summary_prompt, summary_prompt, protocol_prompt
-from os.path import isfile
-from localization import get_localized, get_language_code
+
+from src.localization import get_localized
+from src.db.db import get_user, create_user, save_transcription, save_summary, get_transcription, get_prompt_by_name
+
 from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 
 def get_dir_name(chat_id: int, msg_id: int):
     return f'files/{str(chat_id)}_{str(msg_id)}'
+
+
+def get_file_name(chat_id: int, msg_id: int, text_type: str) -> str:
+    return f'files/{str(chat_id)}_{str(msg_id)}_{text_type}.txt'
 
 
 def md_to_text(md):
@@ -34,7 +37,7 @@ print("Start loading model")
 model = whisperx.load_model("large-v2", device, compute_type=compute_type)
 
 
-def get_transcription(audio_file):
+def generate_transcription(audio_file):
     batch_size = 16  # reduce if low on GPU mem
     # change to "int8" if low on GPU mem (may reduce accuracy)
 
@@ -98,7 +101,7 @@ def get_transcription(audio_file):
     return result
 
 
-def get_summary(text="Привет", system_prompt="Сделай саммаризацию"):
+def generate_summary(text="Привет", system_prompt="Сделай саммаризацию"):
     llm_host = os.getenv("LLM_URL")
     url = f"{llm_host}/v1/chat/completions"
 
@@ -133,31 +136,52 @@ def get_summary(text="Привет", system_prompt="Сделай саммари�
         return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
 
 
-def generate_content_if_not_exist(text_type: str, message: telebot.types.Message, bot: telebot.TeleBot) -> None:
-    dir_name = get_dir_name(message.chat.id, message.id)
-    file_name = text_type + ".txt"
-    file_full_name = f"{dir_name}/{file_name}"
-    code = get_language_code(message)
+def migrate_data_from_files():
+    folder = "files"
 
-    if text_type == 'transcription' or isfile(file_full_name):
-        return
+    short_summary_prompt = get_prompt_by_name("short_summary")
+    summary_prompt = get_prompt_by_name("summary")
+    protocol_prompt = get_prompt_by_name("protocol")
 
-    transcription = ''
-    with open(f"{dir_name}/transcription.txt", "rt", encoding='utf-8') as file:
-        transcription = file.read()
+    for foldername in os.listdir(folder):
 
-    bot.edit_message_text(chat_id=message.chat.id,
-                          message_id=message.message_id,
-                          text=get_localized(
-                              'start_summarization', code))
+        if not os.path.isdir(f'{folder}/{foldername}'):
+            continue
 
-    prompt = protocol_prompt
-    if text_type == 'summary':
-        prompt = summary_prompt
-    elif text_type == 'short_summary':
-        text_type = short_summary_prompt
+        parts = foldername.split("_")
+        user_id = int(parts[0])
+        message_id = int(parts[1])
 
-    result = get_summary(text=transcription,
-                         system_prompt=prompt)
-    with open(file_full_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
+        usr = get_user(user_id)
+        if (usr == None):
+            create_user(user_id, str(user_id))
+
+        for filename in os.listdir(f'{folder}/{foldername}'):
+            fullkek = f'{folder}/{foldername}/{filename}'
+            if not os.path.isfile(fullkek) or not filename.startswith("transcription"):
+                continue
+
+            with open(fullkek, "rt", encoding='utf-8') as file:
+                text = file.read()
+                save_transcription(text, user_id, user_id, message_id)
+                break
+
+        transcription = get_transcription(message_id, user_id)
+        if (transcription == None):
+            print(f"TRANSCRIPTION NOT FOUND FOR {foldername}")
+            continue
+
+        for filename in os.listdir(f'{folder}/{foldername}'):
+            fullkek = f'{folder}/{foldername}/{filename}'
+            if not os.path.isfile(fullkek) or filename.startswith("transcription"):
+                continue
+
+            with open(fullkek, "rt", encoding='utf-8') as file:
+                text = file.read()
+                if filename.startswith("short_summary"):
+                    save_summary(text, transcription.id,
+                                 short_summary_prompt.id)
+                elif filename.startswith("summary"):
+                    save_summary(text, transcription.id, summary_prompt.id)
+                elif filename.startswith("protocol"):
+                    save_summary(text, transcription.id, protocol_prompt.id)

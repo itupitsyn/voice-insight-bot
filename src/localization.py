@@ -62,8 +62,8 @@ You can copy and forward each item as a message or download it as a file!''',
         "ru": "Начинаем обработку файла"
     },
     "start_summarization": {
-        "default": "Summarization has been started",
-        "ru": "Запускаем саммаризацию"
+        "default": "Processing has been started",
+        "ru": "Запускаем обработку"
     },
     "processing_error": {
         "default": "Audio processing error",
@@ -72,6 +72,10 @@ You can copy and forward each item as a message or download it as a file!''',
     "unknown_speaker": {
         "default": "Unknown speaker",
         "ru": "Неизвестный участник"
+    },
+    "unknown_error": {
+        "default": "Unknown error",
+        "ru": "Неизвестная ошибка"
     },
     "unknown_content_type": {
         "default": "Unknown content type",

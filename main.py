@@ -1,18 +1,16 @@
-from dotenv import load_dotenv
 import os
 import requests
-
 import telebot
-
 import threading
 import queue
+import shutil
 
-from localization import get_localized, get_language_code
-
-from message_handlers import add_handlers, get_base_markup
-from utils import get_dir_name, get_summary, get_transcription, md_to_text
-from prompts import short_summary_prompt, summary_prompt, protocol_prompt
+from dotenv import load_dotenv
 from subprocess import run
+from src.localization import get_localized, get_language_code
+from src.message_handlers import add_handlers, get_base_markup
+from src.utils import get_dir_name, generate_transcription, migrate_data_from_files
+from src.db.db import save_transcription
 
 q = queue.Queue()
 
@@ -38,13 +36,13 @@ def worker() -> None:
 
 def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int) -> None:
     code = get_language_code(message)
+    dir_name = get_dir_name(message.chat.id, bot_message_id)
     file_name = ''
     try:
         file_api = os.getenv('TG_FILES_API_ADDRESS')
         tg_api = os.getenv('TG_API_KEY')
         file_url = f'{file_api}/file/bot{tg_api}'
 
-        dir_name = get_dir_name(message.chat.id, bot_message_id)
         os.mkdir(dir_name)
 
         file_server_path = ""
@@ -99,51 +97,24 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
         process_audio(file_name, message, bot, bot_message_id)
 
         print("Done")
-
     except Exception as e:
         print("Ошибка обработки аудио")
         print(e)
         bot.edit_message_text(chat_id=message.chat.id,
                               message_id=bot_message_id,
                               text=get_localized("processing_error", code))
-
     finally:
         try:
-            os.remove(file_name)
+            shutil.rmtree(dir_name)
         except:
-            print(f"Error removing file \"{file_name}\"")
+            print(f"Error removing \"{dir_name}\"")
 
 
 def process_audio(audio_file_name: str, message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int):
-    dir_name = get_dir_name(message.chat.id, bot_message_id)
     code = get_language_code(message)
-    transcription = get_transcription(audio_file_name)
-
-    output_file_name = f'{dir_name}/transcription.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(transcription)
-
-    bot.edit_message_text(chat_id=message.chat.id,
-                          message_id=bot_message_id,
-                          text=get_localized(
-                              'start_summarization', code))
-
-    result = get_summary(text=transcription, system_prompt=summary_prompt)
-    output_file_name = f'{dir_name}/summary.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
-
-    result = get_summary(text=transcription,
-                         system_prompt=short_summary_prompt)
-    output_file_name = f'{dir_name}/short_summary.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
-
-    result = get_summary(text=transcription,
-                         system_prompt=protocol_prompt)
-    output_file_name = f'{dir_name}/protocol.txt'
-    with open(output_file_name, 'w', encoding='utf-8') as f:
-        f.write(md_to_text(result))
+    transcription = generate_transcription(audio_file_name)
+    save_transcription(transcription, message.from_user.id,
+                       message.chat.id, bot_message_id)
 
     bot.edit_message_text(chat_id=message.chat.id,
                           message_id=bot_message_id,
@@ -157,6 +128,8 @@ def main():
 
     if not os.path.exists('files'):
         os.mkdir('files')
+
+    migrate_data_from_files()
 
     # Проверка наличия токенов
     if not (tg_token := os.getenv("TG_API_KEY")):
