@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from telebot import types
 from src.db.models import User, Transcription, Prompt, Summary
 from dotenv import load_dotenv
+from typing import Optional
 import os
 
 load_dotenv()
@@ -34,7 +35,7 @@ def register_user(message: types.Message) -> None:
             session.commit()
 
 
-def get_user(user_id: int) -> User | None:
+def get_user(user_id: int) -> Optional[User]:
     with Session() as session:
         stmt = select(User).where(
             User.id == user_id,
@@ -71,7 +72,7 @@ def save_transcription(text: str, user_id: int, chat_id: int, message_id: int) -
             session.commit()
 
 
-def get_transcription(message_id: int, chat_id: int) -> Transcription | None:
+def get_transcription(message_id: int, chat_id: int) -> Optional[Transcription]:
     with Session() as session:
         stmt = select(Transcription).where(
             Transcription.chat_id == chat_id,
@@ -84,7 +85,7 @@ def get_transcription(message_id: int, chat_id: int) -> Transcription | None:
     return None
 
 
-def get_prompt_by_name(name: str) -> Prompt | None:
+def get_prompt_by_name(name: str) -> Optional[Prompt]:
     with Session() as session:
         stmt = select(Prompt).where(Prompt.name == name)
 
@@ -95,7 +96,7 @@ def get_prompt_by_name(name: str) -> Prompt | None:
     return None
 
 
-def get_summary(transcription_id: int,  prompt_id: int) -> Summary | None:
+def get_summary(transcription_id: int,  prompt_id: int) -> Optional[Summary]:
     with Session() as session:
         stmt = select(Summary).where(Summary.transcription_id == transcription_id,
                                      Summary.prompt_id == prompt_id)
