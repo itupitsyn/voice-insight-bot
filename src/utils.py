@@ -3,7 +3,8 @@ import markdown  # pip install markdown
 import os
 import requests
 
-from src.localization import get_localized, get_language_code
+from src.localization import get_localized
+from src.db.db import get_user, create_user, save_transcription, save_summary, get_transcription, get_prompt_by_name
 
 from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
@@ -133,3 +134,54 @@ def generate_summary(text="Привет", system_prompt="Сделай самма
         return f"Ошибка сети: {str(e)}"
     except ValueError:
         return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
+
+
+def migrate_data_from_files():
+    folder = "files"
+
+    short_summary_prompt = get_prompt_by_name("short_summary")
+    summary_prompt = get_prompt_by_name("summary")
+    protocol_prompt = get_prompt_by_name("protocol")
+
+    for foldername in os.listdir(folder):
+
+        if not os.path.isdir(f'{folder}/{foldername}'):
+            continue
+
+        parts = foldername.split("_")
+        user_id = int(parts[0])
+        message_id = int(parts[1])
+
+        usr = get_user(user_id)
+        if (usr == None):
+            create_user(user_id, str(user_id))
+
+        for filename in os.listdir(f'{folder}/{foldername}'):
+            fullkek = f'{folder}/{foldername}/{filename}'
+            if not os.path.isfile(fullkek) or not filename.startswith("transcription"):
+                continue
+
+            with open(fullkek, "rt", encoding='utf-8') as file:
+                text = file.read()
+                save_transcription(text, user_id, user_id, message_id)
+                break
+
+        transcription = get_transcription(message_id, user_id)
+        if (transcription == None):
+            print(f"TRANSCRIPTION NOT FOUND FOR {foldername}")
+            continue
+
+        for filename in os.listdir(f'{folder}/{foldername}'):
+            fullkek = f'{folder}/{foldername}/{filename}'
+            if not os.path.isfile(fullkek) or filename.startswith("transcription"):
+                continue
+
+            with open(fullkek, "rt", encoding='utf-8') as file:
+                text = file.read()
+                if filename.startswith("short_summary"):
+                    save_summary(text, transcription.id,
+                                 short_summary_prompt.id)
+                elif filename.startswith("summary"):
+                    save_summary(text, transcription.id, summary_prompt.id)
+                elif filename.startswith("protocol"):
+                    save_summary(text, transcription.id, protocol_prompt.id)

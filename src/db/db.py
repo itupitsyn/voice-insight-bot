@@ -34,14 +34,35 @@ def register_user(message: types.Message) -> None:
             session.commit()
 
 
-def save_transcription(text: str, message: types.Message, bot_message_id: int) -> None:
+def get_user(user_id: int) -> User | None:
+    with Session() as session:
+        stmt = select(User).where(
+            User.id == user_id,
+        )
+        row = session.execute(stmt).first()
+        if row is not None:
+            return row[0]
+
+    return None
+
+
+def create_user(user_id: int, user_name: str):
     with Session() as session:
         try:
-            stmt = insert(Transcription).values(
-                user_id=message.from_user.id,
-                chat_id=message.chat.id,
-                message_id=bot_message_id,
-                text=text)
+            stmt = insert(User).values(id=user_id, user_name=user_name)
+            session.execute(stmt)
+        except:
+            session.rollback()
+            raise
+        else:
+            session.commit()
+
+
+def save_transcription(text: str, user_id: int, chat_id: int, message_id: int) -> None:
+    with Session() as session:
+        try:
+            stmt = insert(Transcription).values(user_id=user_id,
+                                                chat_id=chat_id, message_id=message_id, text=text)
             session.execute(stmt)
         except:
             session.rollback()

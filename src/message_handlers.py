@@ -112,7 +112,6 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                 f.write(transcription.text)
 
             with open(file_name, "rt", encoding='utf-8') as file:
-
                 original_message = msg.reply_to_message
                 if original_message != None:
                     bot.send_document(msg.chat.id, file,
@@ -228,7 +227,6 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                 f.write(content)
 
             with open(file_name, "rt", encoding='utf-8') as file:
-
                 original_message = msg.reply_to_message
                 if original_message != None:
                     bot.send_document(msg.chat.id, file,

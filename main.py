@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from subprocess import run
 from src.localization import get_localized, get_language_code
 from src.message_handlers import add_handlers, get_base_markup
-from src.utils import get_dir_name, generate_transcription
+from src.utils import get_dir_name, generate_transcription, migrate_data_from_files
 from src.db.db import save_transcription
 
 q = queue.Queue()
@@ -113,7 +113,8 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 def process_audio(audio_file_name: str, message: telebot.types.Message, bot: telebot.TeleBot, bot_message_id: int):
     code = get_language_code(message)
     transcription = generate_transcription(audio_file_name)
-    save_transcription(transcription, message, bot_message_id)
+    save_transcription(transcription, message.from_user.id,
+                       message.chat.id, bot_message_id)
 
     bot.edit_message_text(chat_id=message.chat.id,
                           message_id=bot_message_id,
@@ -127,6 +128,8 @@ def main():
 
     if not os.path.exists('files'):
         os.mkdir('files')
+
+    migrate_data_from_files()
 
     # Проверка наличия токенов
     if not (tg_token := os.getenv("TG_API_KEY")):
