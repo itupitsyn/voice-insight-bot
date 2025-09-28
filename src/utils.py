@@ -1,12 +1,10 @@
 import whisperx
-from dotenv import load_dotenv
+import markdown  # pip install markdown
 import os
 import requests
-import telebot
 
 from src.localization import get_localized, get_language_code
 
-import markdown  # pip install markdown
 from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 
@@ -135,4 +133,3 @@ def generate_summary(text="Привет", system_prompt="Сделай самма
         return f"Ошибка сети: {str(e)}"
     except ValueError:
         return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
-
