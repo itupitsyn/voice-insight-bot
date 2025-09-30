@@ -70,8 +70,16 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 
             if message.video:
                 video_file_name = f'{dir_name}/{message.video.file_name}'
-                video_file_server_path = bot.get_file(
-                    message.video.file_id).file_path
+                for i in range(3):
+                    try:
+                        video_file_server_path = bot.get_file(
+                            message.video.file_id).file_path
+                        break
+                    except Exception as e:
+                        print(e)
+                        if i < 2:
+                           continue
+                        raise e
 
             elif message.document:
                 video_file_name = f'{dir_name}/{message.document.file_name}'
