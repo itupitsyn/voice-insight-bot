@@ -78,7 +78,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
                     except Exception as e:
                         print(e)
                         if i < 2:
-                           continue
+                            continue
                         raise e
 
             elif message.document:
@@ -98,7 +98,7 @@ def process_message(message: telebot.types.Message, bot: telebot.TeleBot, bot_me
 
             file_name = f"{dir_name}/audio.aac"
 
-            run(f"ffmpeg -i {video_file_name} -acodec aac -b:a 192k {file_name}",
+            run(f"ffmpeg -i \"{video_file_name}\" -acodec aac -b:a 192k \"{file_name}\"",
                 shell=True, check=True)
             os.remove(video_file_name)
 

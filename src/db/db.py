@@ -5,6 +5,7 @@ from telebot import types
 from src.db.models import User, Transcription, Prompt, Summary
 from dotenv import load_dotenv
 from typing import Optional
+from datetime import datetime
 import os
 
 load_dotenv()
@@ -23,7 +24,8 @@ def register_user(message: types.Message) -> None:
                                        ).on_conflict_do_update(
                 set_=dict(user_name=message.from_user.username,
                           first_name=message.from_user.first_name,
-                          last_name=message.from_user.last_name),
+                          last_name=message.from_user.last_name,
+                          updated_at=datetime.now()),
                 index_elements=['id']
 
             )
