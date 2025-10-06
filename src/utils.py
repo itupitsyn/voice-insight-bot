@@ -153,7 +153,7 @@ def migrate_data_from_files():
         message_id = int(parts[1])
 
         usr = get_user(user_id)
-        if (usr == None):
+        if usr == None:
             create_user(user_id, str(user_id))
 
         for filename in os.listdir(f'{folder}/{foldername}'):
@@ -167,7 +167,7 @@ def migrate_data_from_files():
                 break
 
         transcription = get_transcription(message_id, user_id)
-        if (transcription == None):
+        if transcription == None:
             print(f"TRANSCRIPTION NOT FOUND FOR {foldername}")
             continue
 
@@ -185,3 +185,10 @@ def migrate_data_from_files():
                     save_summary(text, transcription.id, summary_prompt.id)
                 elif filename.startswith("protocol"):
                     save_summary(text, transcription.id, protocol_prompt.id)
+
+
+def get_full_completed_text(code: str) -> str:
+    text = get_localized('processing_completed', code)
+    text += f"\n{get_localized('transcription_result_hint', code)}"
+
+    return text

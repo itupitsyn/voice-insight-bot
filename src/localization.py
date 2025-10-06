@@ -41,6 +41,10 @@ You can copy and forward each item as a message or download it as a file!''',
         "default": "Processing completed",
         "ru": "Обработка завершена"
     },
+    "transcription_result_hint": {
+        "default": "Send a custom request as a reply to this message",
+        "ru": "Отправьте произвольный запрос ответом на это сообщение"
+    },
     "download": {
         "default": "Download",
         "ru": "Скачать"
@@ -86,27 +90,27 @@ You can copy and forward each item as a message or download it as a file!''',
 
 def get_localized(phraze_key: str, language_code: str) -> str:
     phraze = localization.get(phraze_key)
-    if (not phraze):
+    if not phraze:
         return ''
 
     localized = phraze.get(language_code)
 
-    if (localized):
+    if localized:
         return localized
 
     localized = phraze.get("default")
 
-    if (localized):
+    if localized:
         return localized
 
     return ""
 
 
 def get_language_code(message):
-    if (message == None):
+    if message == None:
         return "en"
 
-    if (message.from_user.language_code):
+    if message.from_user.language_code:
         return message.from_user.language_code
 
     return get_language_code(message.reply_to_message)

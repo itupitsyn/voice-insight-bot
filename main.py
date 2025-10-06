@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from subprocess import run
 from src.localization import get_localized, get_language_code
 from src.message_handlers import add_handlers, get_base_markup
-from src.utils import get_dir_name, generate_transcription
+from src.utils import get_dir_name, generate_transcription, get_full_completed_text
 from src.db.db import save_transcription
 
 q = queue.Queue()
@@ -126,8 +126,7 @@ def process_audio(audio_file_name: str, message: telebot.types.Message, bot: tel
 
     bot.edit_message_text(chat_id=message.chat.id,
                           message_id=bot_message_id,
-                          text=get_localized(
-                              'processing_completed', code),
+                          text=get_full_completed_text(code),
                           reply_markup=get_base_markup(code))
 
 

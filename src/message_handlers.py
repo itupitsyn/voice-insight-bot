@@ -251,3 +251,17 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                 os.remove(file_name)
             except:
                 print(f"Error removing file \"{file_name}\"")
+
+    @bot.message_handler()
+    def handle_message(message: telebot.types.Message):
+        if message.reply_to_message is None:
+            return
+
+        code = get_language_code(message)
+
+        try:
+            transcription = get_transcription(
+                message.reply_to_message.id, message.chat.id)
+        except:
+            bot.send_message(message.caht.id, get_localized(
+                'unknown_error', code))
