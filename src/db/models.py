@@ -22,7 +22,7 @@ class User(Base):
         DateTime(timezone=True),
         default=func.now(),
         server_default=FetchedValue(),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -44,7 +44,7 @@ class Prompt(Base):
         DateTime(timezone=True),
         default=func.now(),
         server_default=FetchedValue(),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -53,18 +53,14 @@ class Prompt(Base):
         server_default=FetchedValue(),
         server_onupdate=FetchedValue(),
     )
-    deleted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Transcription(Base):
     __tablename__ = "transcriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete='CASCADE'))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(BigInteger)
     message_id: Mapped[int] = mapped_column(BigInteger)
     text: Mapped[str] = mapped_column(Text)
@@ -73,7 +69,7 @@ class Transcription(Base):
         DateTime(timezone=True),
         default=func.now(),
         server_default=FetchedValue(),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -85,20 +81,20 @@ class Transcription(Base):
 
 
 class Summary(Base):
-    __tablename__ = 'summaries'
+    __tablename__ = "summaries"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    prompt_id: Mapped[int] = mapped_column(
-        ForeignKey("prompts.id", ondelete='CASCADE'))
+    prompt_id: Mapped[int] = mapped_column(ForeignKey("prompts.id", ondelete="CASCADE"))
     transcription_id: Mapped[int] = mapped_column(
-        ForeignKey("transcriptions.id", ondelete='CASCADE'))
+        ForeignKey("transcriptions.id", ondelete="CASCADE")
+    )
     text: Mapped[str] = mapped_column(Text)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),
         server_default=FetchedValue(),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -113,15 +109,14 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete='CASCADE'))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     seconds_left: Mapped[int] = mapped_column()
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),
         server_default=FetchedValue(),
-        nullable=False
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

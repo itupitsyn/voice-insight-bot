@@ -1,97 +1,71 @@
 localization = {
-    "transcription": {
-        "default": "Transcription",
-        "ru": "Транскрипция"
-    },
-    "summary": {
-        "default": "Summary",
-        "ru": "Саммари"
-    },
-    "short_summary": {
-        "default": "Short summary",
-        "ru": "Укороченное саммари"
-    },
-    "protocol": {
-        "default": "Protocol",
-        "ru": "Протокол"
-    },
+    "transcription": {"default": "Transcription", "ru": "Транскрипция"},
+    "summary": {"default": "Summary", "ru": "Саммари"},
+    "short_summary": {"default": "Short summary", "ru": "Укороченное саммари"},
+    "protocol": {"default": "Protocol", "ru": "Протокол"},
     "file_added_to_queue": {
         "default": "File added to queue",
-        "ru": "Файл добавлен в очередь"
+        "ru": "Файл добавлен в очередь",
     },
     "start_answer": {
-        "default": '''Hi friend 👋 We know how much time you spend in meetings and calls, how many details you need to keep track of, and how easy it is to get lost in the flow of information! That's why we created a bot for you that can transcribe audio recordings of calls and video meetings 📞.
+        "default": """Hi friend 👋 We know how much time you spend in meetings and calls, how many details you need to keep track of, and how easy it is to get lost in the flow of information! That's why we created a bot for you that can transcribe audio recordings of calls and video meetings 📞.
 
 Click the paperclip 📎 and upload a call file, video meeting recording, or record your voice → our smart bot 🤖 will analyze the call → you'll get:
 ✔️ a brief summary outlining the main concept of the meeting
 ✔️ a full summary with detailed conversation topics
 ✔️ a call transcript to dive into the details of the call
 
-You can copy and forward each item as a message or download it as a file!''',
-        "ru": '''Привет, друг 👋 Мы знаем как много времени приходится проводить на встречах и созвонах, сколько деталей нужно учесть и не потеряться в потоке информации! Для тебя мы создали бота, который умеет транскрибировать аудиозаписи звонков и видеовстреч 📞. 
+You can copy and forward each item as a message or download it as a file!""",
+        "ru": """Привет, друг 👋 Мы знаем как много времени приходится проводить на встречах и созвонах, сколько деталей нужно учесть и не потеряться в потоке информации! Для тебя мы создали бота, который умеет транскрибировать аудиозаписи звонков и видеовстреч 📞. 
 
 Нажми на скрепку 📎 и загрузи файл звонка, видеовстречи или запиши voice → наш умный бот 🤖 проанализирует звонок → ты получишь:
 ✔️ краткое саммари, где изложена основная концепция встречи
 ✔️ полное саммари, где можно увидеть детализированные топики разговора
 ✔️ транскрипцию звонка, чтобы погрузиться в детали звонка
 
-Каждый пункт можно скопировать и переслать в виде сообщения или загрузить файлом!'''
+Каждый пункт можно скопировать и переслать в виде сообщения или загрузить файлом!""",
     },
     "processing_completed": {
-        "default": "Processing completed",
-        "ru": "Обработка завершена"
+        "default": "Processing completed🤗",
+        "ru": "Обработка завершена🤗",
     },
     "transcription_result_hint": {
-        "default": "Send a custom request as a reply to this message",
-        "ru": "Отправьте произвольный запрос ответом на это сообщение"
+        "default": "Choose the option or send a custom request as a reply to this message✍️",
+        "ru": "Выберите действие или отправьте произвольный запрос ответом на это сообщение✍️",
     },
-    "download": {
-        "default": "Download",
-        "ru": "Скачать"
-    },
-    "show": {
-        "default": "Show",
-        "ru": "Показать"
-    },
-    "back": {
-        "default": "Back",
-        "ru": "Назад"
-    },
-    "chose_option": {
-        "default": "Chose the option",
-        "ru": "Выберите вариант"
-    },
+    "download": {"default": "Download", "ru": "Скачать"},
+    "show": {"default": "Show", "ru": "Показать"},
+    "back": {"default": "Back", "ru": "Назад"},
+    "chose_option": {"default": "Chose the option", "ru": "Выберите вариант"},
     "start_processing": {
         "default": "File processing has been started",
-        "ru": "Начинаем обработку файла"
+        "ru": "Начинаем обработку файла",
+    },
+    "transcription_not_found": {
+        "default": "The transcription for this message not found",
+        "ru": "Транскрипция для этого сообщения не найдена"
     },
     "start_summarization": {
         "default": "Processing has been started",
-        "ru": "Запускаем обработку"
+        "ru": "Запускаем обработку",
     },
     "processing_error": {
         "default": "Audio processing error",
-        "ru": "Ошибка обработки аудио"
+        "ru": "Ошибка обработки аудио",
     },
-    "unknown_speaker": {
-        "default": "Unknown speaker",
-        "ru": "Неизвестный участник"
-    },
-    "unknown_error": {
-        "default": "Unknown error",
-        "ru": "Неизвестная ошибка"
-    },
+    "unknown_speaker": {"default": "Unknown speaker", "ru": "Неизвестный участник"},
+    "unknown_error": {"default": "Unknown error", "ru": "Неизвестная ошибка"},
     "unknown_content_type": {
         "default": "Unknown content type",
-        "ru": "Неизвестный тип контента"
-    }
+        "ru": "Неизвестный тип контента",
+    },
 }
 
 
 def get_localized(phraze_key: str, language_code: str) -> str:
     phraze = localization.get(phraze_key)
     if not phraze:
-        return ''
+        return ""
 
     localized = phraze.get(language_code)
 
