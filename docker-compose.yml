@@ -8,7 +8,7 @@ x-def-logging: &default-logging
 services:
   voice-insight-bot:
     build:
-      context: contextPath
+      context: .
       dockerfile: Dockerfile
     container_name: voice-insight-bot
     
