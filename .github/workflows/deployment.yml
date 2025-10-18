@@ -18,17 +18,12 @@ jobs:
           script: |
             cd voice-insight-bot \
             && git fetch && git reset origin/master --hard \
-            && echo ${{ secrets.PASSWORD }} | sudo -S docker stop voice-insight-bot || true \
-            && echo ${{ secrets.PASSWORD }} | sudo -S docker rm voice-insight-bot || true \
-            && echo ${{ secrets.PASSWORD }} | sudo -S docker rmi voice-insight-bot || true \
-            && echo ${{ secrets.PASSWORD }} | sudo -S docker build . -t voice-insight-bot \
-            && echo ${{ secrets.PASSWORD }} | sudo -S docker run -d \
-            --restart always \
-            -e HF_API_KEY=${{ secrets.HF_API_KEY }} \
-            -e TG_API_KEY=${{ secrets.TG_API_KEY }} \
-            -e LLM_URL=${{ secrets.LLM_URL }} \
-            -e TG_API_ADDRESS=${{ secrets.TG_API_ADDRESS }} \
-            -e TG_FILES_API_ADDRESS=${{ secrets.TG_FILES_API_ADDRESS }} \
-            -e DB_URL=${{ secrets.DB_URL }} \
-            -v /home/user/voice-insight-bot/files:/root/files \
-            --gpus all --name voice-insight-bot voice-insight-bot
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker compose down \
+            && echo ${{ secrets.PASSWORD }} | sudo -S \
+            HF_API_KEY=${{ secrets.HF_API_KEY }} \
+            TG_API_KEY=${{ secrets.TG_API_KEY }} \
+            LLM_URL=${{ secrets.LLM_URL }} \
+            TG_API_ADDRESS=${{ secrets.TG_API_ADDRESS }} \
+            TG_FILES_API_ADDRESS=${{ secrets.TG_FILES_API_ADDRESS }} \
+            DB_URL=${{ secrets.DB_URL }} \
+            docker compose up -d
