@@ -6,10 +6,11 @@ x-def-logging: &default-logging
       loki-batch-size: "400"
 
 services:
-  whisperx-app:
-    image: emptynull/whisperx-cuda:latest
+  voice-insight-bot:
+    build:
+      context: contextPath
+      dockerfile: Dockerfile
     container_name: voice-insight-bot
-    working_dir: /root
     
     # Для использования GPU (раскомментируйте при необходимости)
     deploy:
