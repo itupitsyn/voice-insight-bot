@@ -24,6 +24,7 @@ services:
       - PYTHONUNBUFFERED=1
     
     volumes:
+      - .:/root
       - /home/user/voice-insight-bot/files:/root/files
   
     command: ["python3", "main.py"]
