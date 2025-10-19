@@ -4,6 +4,7 @@ import telebot
 import threading
 import queue
 import shutil
+import logging
 
 from dotenv import load_dotenv
 from subprocess import run
@@ -14,9 +15,14 @@ from src.db.db import save_transcription
 
 q = queue.Queue()
 
+logging.basicConfig(
+    format="%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s",
+    level=logging.INFO,
+)
+
 
 def worker() -> None:
-    print("The queue worker has been started")
+    logging.info("The queue worker has been started")
     while True:
         item = q.get()
         bot: telebot.TeleBot = item.get("bot")
@@ -79,7 +85,7 @@ def process_message(
                         ).file_path
                         break
                     except Exception as e:
-                        print(e)
+                        logging.error(e)
                         if i < 2:
                             continue
                         raise e
@@ -113,10 +119,10 @@ def process_message(
 
         process_audio(file_name, message, bot, bot_message_id)
 
-        print("Done")
+        logging.info("Done")
     except Exception as e:
-        print("Ошибка обработки аудио")
-        print(e)
+        logging.error("Ошибка обработки аудио")
+        logging.error(e)
         bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message_id,
@@ -126,7 +132,7 @@ def process_message(
         try:
             shutil.rmtree(dir_name)
         except:
-            print(f'Error removing "{dir_name}"')
+            logging.error(f'Error removing "{dir_name}"')
 
 
 def process_audio(
@@ -163,7 +169,7 @@ def main():
         raise ValueError("LLM_URL не найден в переменных окружения")
 
     if not os.getenv("HF_API_KEY"):
-        print("⚠️ HF_API_KEY не найден - диаризация может не работать")
+        logging.error("⚠️ HF_API_KEY не найден - диаризация может не работать")
 
     bot = telebot.TeleBot(tg_token)
 
@@ -180,7 +186,7 @@ def main():
 
     threading.Thread(target=worker).start()
 
-    print("🎧 Бот запущен. Ожидание аудиофайлов...")
+    logging.info("🎧 Бот запущен. Ожидание аудиофайлов...")
     bot.infinity_polling()
 
 

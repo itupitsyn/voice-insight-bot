@@ -2,6 +2,7 @@ import whisperx
 import markdown  # pip install markdown
 import os
 import requests
+import logging
 
 from src.localization import get_localized
 from src.db.db import (
@@ -35,7 +36,7 @@ def md_to_text(md):
 device = "cuda"
 compute_type = "float16"
 
-print("Start loading model")
+logging.info("Start loading model")
 
 # 1. Transcribe with original whisper (batched)
 
@@ -130,27 +131,23 @@ def generate_summary(text="Привет", system_prompt="Сделай самма
         "stream": False,
     }
 
-    try:
-        response = requests.post(url, json=data)
-        response.raise_for_status()
+    response = requests.post(url, json=data)
+    response.raise_for_status()
 
-        json_response = response.json()
-        if (
-            "choices" in json_response
-            and len(json_response["choices"])
-            and "message" in json_response["choices"][0]
-            and "content" in json_response["choices"][0]["message"]
-        ):
-            return json_response["choices"][0]["message"]["content"]
-        else:
-            return f"""Ошибка: неверный формат ответа.
+    json_response = response.json()
+    if (
+        "choices" in json_response
+        and len(json_response["choices"])
+        and "message" in json_response["choices"][0]
+        and "content" in json_response["choices"][0]["message"]
+    ):
+        return json_response["choices"][0]["message"]["content"]
+    else:
+        raise ValueError(
+            f"""Ошибка: неверный формат ответа.
 Полный ответ:
 {json_response}"""
-
-    except requests.exceptions.RequestException as e:
-        return f"Ошибка сети: {str(e)}"
-    except ValueError:
-        return f"Ошибка: ответ не в формате JSON. Текст ответа: {response.text}"
+        )
 
 
 def migrate_data_from_files():
@@ -185,7 +182,7 @@ def migrate_data_from_files():
 
         transcription = get_transcription(message_id, user_id)
         if transcription == None:
-            print(f"TRANSCRIPTION NOT FOUND FOR {foldername}")
+            logging.error(f"TRANSCRIPTION NOT FOUND FOR {foldername}")
             continue
 
         for filename in os.listdir(f"{folder}/{foldername}"):

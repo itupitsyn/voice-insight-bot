@@ -18,6 +18,7 @@ from src.db.db import (
 import telebot
 import queue
 import os
+import logging
 
 
 def get_base_markup(language_code: str):
@@ -121,7 +122,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                 reply_markup=markup,
             )
         except Exception as e:
-            print(e)
+            logging.error(e)
             bot.answer_callback_query(call.id, f"{text_type} not found")
 
     @bot.callback_query_handler(func=lambda call: call.data == "download_transcription")
@@ -171,7 +172,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
             try:
                 os.remove(file_name)
             except:
-                print(f'Error removing file "{file_name}"')
+                logging.error(f'Error removing file "{file_name}"')
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("show_"))
     def handle_button_click(call):
@@ -219,7 +220,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
                 reply_markup=markup,
             )
         except Exception as e:
-            print(e)
+            logging.error(e)
             bot.edit_message_text(
                 chat_id=msg.chat.id,
                 message_id=msg.id,
@@ -297,7 +298,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
             try:
                 os.remove(file_name)
             except:
-                print(f'Error removing file "{file_name}"')
+                logging.error(f'Error removing file "{file_name}"')
 
     @bot.message_handler()
     def handle_message(message: telebot.types.Message):
@@ -333,7 +334,7 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
             )
 
         except Exception as e:
-            print(e)
+            logging.error(e)
             bot.send_message(
                 message.chat.id,
                 reply_to_message_id=message.id,
