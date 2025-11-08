@@ -115,12 +115,14 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
             code = get_language_code(msg)
             markup = get_text_processing_markup(code, text_type)
 
-            bot.edit_message_text(
-                chat_id=msg.chat.id,
-                message_id=msg.message_id,
-                text=limit_text(transcription.text),
-                reply_markup=markup,
-            )
+            limited_text = limit_text(transcription.text)
+            if msg.text.strip() != limited_text.strip():
+                bot.edit_message_text(
+                    chat_id=msg.chat.id,
+                    message_id=msg.message_id,
+                    text=limited_text,
+                    reply_markup=markup,
+                )
         except Exception as e:
             logging.error(e)
             bot.answer_callback_query(call.id, f"{text_type} not found")
@@ -213,12 +215,15 @@ def add_handlers(bot: telebot.TeleBot, q: queue.Queue):
             else:
                 content = summary.text
 
-            bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
-                text=limit_text(content),
-                reply_markup=markup,
-            )
+            limited_text = limit_text(content)
+
+            if msg.text.strip() != limited_text.strip():
+                bot.edit_message_text(
+                    chat_id=call.message.chat.id,
+                    message_id=call.message.message_id,
+                    text=limited_text,
+                    reply_markup=markup,
+                )
         except Exception as e:
             logging.error(e)
             bot.edit_message_text(
