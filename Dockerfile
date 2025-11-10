@@ -1,8 +1,8 @@
-FROM emptynull/whisperx-cuda:latest
+FROM python:3.10.19-alpine3.21
 
 WORKDIR /root
 
-RUN pip3 install SQLAlchemy psycopg2-binary alembic
+RUN pip3 install SQLAlchemy psycopg2-binary alembic requests telebot dotenv markdown beautifulsoup4
 
 COPY .env main.py alembic.ini ./
 COPY src ./src

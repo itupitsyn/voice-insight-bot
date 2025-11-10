@@ -1,4 +1,3 @@
-import whisperx
 import markdown  # pip install markdown
 import os
 import requests
@@ -33,73 +32,21 @@ def md_to_text(md):
     return soup.get_text()
 
 
-device = "cuda"
-compute_type = "float16"
-
-logging.info("Start loading model")
-
-# 1. Transcribe with original whisper (batched)
-
-# save model to local path (optional)
-# model_dir = "/path/"
-# model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root=model_dir)
-
-model = whisperx.load_model("large-v2", device, compute_type=compute_type)
-
-
 def generate_transcription(audio_file):
-    batch_size = 16  # reduce if low on GPU mem
-    # change to "int8" if low on GPU mem (may reduce accuracy)
+    url = "http://192.168.1.90:8000/v1/audio/transcriptions"
+    files = {"file": open(audio_file, "rb")}
+    data = {"diarize": True}
 
-    audio = whisperx.load_audio(audio_file)
-    result = model.transcribe(audio, batch_size=batch_size)
-    language_code = result["language"]
+    response = requests.post(url, files=files, data=data)
+    responseData = response.json()
 
-    # print(result["segments"]) # before alignment
-
-    # # delete model if low on GPU resources
-    # # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model
-
-    # # 2. Align whisper output
-    model_a, metadata = whisperx.load_align_model(
-        language_code=language_code, device=device
-    )
-    result = whisperx.align(
-        result["segments"],
-        model_a,
-        metadata,
-        audio,
-        device,
-        return_char_alignments=False,
-    )
-
-    # print(result["segments"]) # after alignment
-
-    # delete model if low on GPU resources
-    # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model_a
-
-    # 3. Assign speaker labels
-    diarize_model = whisperx.diarize.DiarizationPipeline(
-        use_auth_token=os.getenv("HF_API_KEY"), device=device
-    )
-
-    # add min/max number of speakers if known
-    diarize_segments = diarize_model(audio)
-    # diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
-
-    result = whisperx.assign_word_speakers(diarize_segments, result)
-    # print(diarize_segments)
-    # print(result["segments"]) # segments are now assigned speaker IDs
-
-    # with open("wiwiw.json", "w", encoding='utf-8') as file:
-    #   json.dump(result["segments"], file, ensure_ascii=False, indent=4)
+    language_code = responseData["language"]
 
     listToReturn = []
 
     prev_speaker = None
 
-    for i in result["segments"]:
-
+    for i in responseData["segments"]:
         speaker = None
         if isinstance(i, dict) and "speaker" in i:
             speaker = i["speaker"]

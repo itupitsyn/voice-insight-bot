@@ -20,7 +20,7 @@ jobs:
             && git fetch && git reset origin/master --hard \
             && echo ${{ secrets.PASSWORD }} | sudo -S docker compose down \
             && echo ${{ secrets.PASSWORD }} | sudo -S \
-            HF_API_KEY=${{ secrets.HF_API_KEY }} \
+            WHISPERX_API_ADDRESS=${{ secrets.WHISPERX_API_ADDRESS }} \
             TG_API_KEY=${{ secrets.TG_API_KEY }} \
             LLM_URL=${{ secrets.LLM_URL }} \
             TG_API_ADDRESS=${{ secrets.TG_API_ADDRESS }} \

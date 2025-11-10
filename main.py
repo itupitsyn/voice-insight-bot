@@ -168,8 +168,10 @@ def main():
     if not (os.getenv("LLM_URL")):
         raise ValueError("LLM_URL не найден в переменных окружения")
 
-    if not os.getenv("HF_API_KEY"):
-        logging.error("⚠️ HF_API_KEY не найден - диаризация может не работать")
+    if not os.getenv("WHISPERX_API_ADDRESS"):
+        raise ValueError(
+            "WHISPERX_API_ADDRESS не найден - диаризация может не работать"
+        )
 
     bot = telebot.TeleBot(tg_token)
 
