@@ -19,6 +19,7 @@ jobs:
             cd voice-insight-bot \
             && git fetch && git reset origin/master --hard \
             && echo ${{ secrets.PASSWORD }} | sudo -S docker compose down \
+            && echo ${{ secrets.PASSWORD }} | sudo -S docker rmi voice-insight-bot-voice-insight-bot || true \
             && echo ${{ secrets.PASSWORD }} | sudo -S \
             WHISPERX_API_ADDRESS=${{ secrets.WHISPERX_API_ADDRESS }} \
             TG_API_KEY=${{ secrets.TG_API_KEY }} \
