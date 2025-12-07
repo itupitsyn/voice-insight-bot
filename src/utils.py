@@ -2,6 +2,7 @@ import markdown  # pip install markdown
 import os
 import requests
 import logging
+import time
 
 from src.localization import get_localized
 from src.db.db import (
@@ -33,15 +34,30 @@ def md_to_text(md):
 
 
 def generate_transcription(audio_file):
-    url = "http://192.168.1.90:8000/v1/audio/transcriptions"
+    url = "http://192.168.1.116:8000/api/transcription"
     files = {"file": open(audio_file, "rb")}
-    data = {"diarize": True}
 
-    response = requests.post(url, files=files, data=data)
+    response = requests.post(url, files=files)
     responseData = response.json()
+    id = responseData["id"]
 
+    while True:
+        response = requests.get(
+            "http://192.168.1.116:8000/api/result", params={"id": id})
+        responseData = response.json()
+
+        status = responseData["status"]
+        if status == 'error':
+            raise responseData
+
+        if status == 'done':
+            responseData = responseData["data"]
+            break
+
+        time.sleep(5)
+        
     language_code = responseData["language"]
-
+    
     listToReturn = []
 
     prev_speaker = None
@@ -140,7 +156,8 @@ def migrate_data_from_files():
             with open(fullkek, "rt", encoding="utf-8") as file:
                 text = file.read()
                 if filename.startswith("short_summary"):
-                    save_summary(text, transcription.id, short_summary_prompt.id)
+                    save_summary(text, transcription.id,
+                                 short_summary_prompt.id)
                 elif filename.startswith("summary"):
                     save_summary(text, transcription.id, summary_prompt.id)
                 elif filename.startswith("protocol"):
