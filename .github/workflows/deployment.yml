@@ -16,7 +16,7 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: 50
           script: |
-            cd voice-insight-bot \
+            cd apps/voice-insight-bot \
             && git fetch && git reset origin/master --hard \
             && echo ${{ secrets.PASSWORD }} | sudo -S docker compose down \
             && echo ${{ secrets.PASSWORD }} | sudo -S docker rmi voice-insight-bot-voice-insight-bot || true \

@@ -34,7 +34,7 @@ def md_to_text(md):
 
 
 def generate_transcription(audio_file):
-    url = "http://192.168.1.116:8000/api/transcription"
+    url = "http://192.168.1.90:8000/api/transcription"
     files = {"file": open(audio_file, "rb")}
 
     response = requests.post(url, files=files)
@@ -43,7 +43,7 @@ def generate_transcription(audio_file):
 
     while True:
         response = requests.get(
-            "http://192.168.1.116:8000/api/result", params={"id": id})
+            "http://192.168.1.90:8000/api/result", params={"id": id})
         responseData = response.json()
 
         status = responseData["status"]
